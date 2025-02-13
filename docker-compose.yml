@@ -1,29 +1,27 @@
-version: "3.8"
 services:
-  db:
-    image: mysql:8
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-    ports:
-      - "3306:3306"
-    volumes:
-      - db_data:/var/lib/mysql
+ db:
+   image: mysql:latest
+   restart: always
+   ports:
+     - '3306:3306'
+   volumes:
+     - ./data:/var/lib/mysql
+   env_file: .env
+   healthcheck:
+     test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$$MYSQL_USER", "-p$$MYSQL_PASSWORD"]
+     interval: 5s
+     timeout: 5s
+     retries: 5
+     start_period: 30s
 
-  web:
-    build: .
-    depends_on:
-      - db
-    ports:
-      - "6543:6543"
-    environment:
-      MYSQL_HOST: db
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
 
-volumes:
-  db_data:
+ web:
+   build: .
+   ports:
+     - '8000:8000'
+   volumes:
+     - ./app:/code/app
+   depends_on:
+     db:
+       condition: service_healthy
+   env_file: .env
