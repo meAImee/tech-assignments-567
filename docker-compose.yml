@@ -3,12 +3,12 @@ services:
    image: mysql:latest
    restart: always
    ports:
-     - '3306:3306'
+     - '3307:3306'
    volumes:
      - ./data:/var/lib/mysql
    env_file: .env
    healthcheck:
-     test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$$MYSQL_USER", "-p$$MYSQL_PASSWORD"]
+     test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u$$MYSQL_USER", "-p$$MYSQL_PASSWORD"]
      interval: 5s
      timeout: 5s
      retries: 5
