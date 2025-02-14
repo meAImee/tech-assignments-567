@@ -127,6 +127,9 @@ def get_data_by_id(sensor_type: str, id: int):
 
 @app.get("/api/{sensor_type}/count")
 def get_count(sensor_type: str):
+    if sensor_type not in ["temperature", "humidity", "light"]:
+        raise HTTPException(status_code=400, detail="Invalid sensor type")
+    
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(f"SELECT COUNT(*) FROM {sensor_type}")
