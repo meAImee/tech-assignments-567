@@ -32,9 +32,9 @@ def seed_database():
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {table} (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                value FLOAT NOT NULL,
+                timestamp DATETIME NOT NULL,
                 unit VARCHAR(10) NOT NULL,
-                timestamp DATETIME NOT NULL
+                value FLOAT NOT NULL
             )
         """)
 
@@ -42,7 +42,7 @@ def seed_database():
             reader = csv.reader(csvfile)
             next(reader)  # Skip header row
             data = [(float(row[0]), row[1], row[2]) for row in reader]
-            cursor.executemany(f"INSERT INTO {table} (value, unit, timestamp) VALUES (%s, %s, %s)", data)
+            cursor.executemany(f"INSERT INTO {table} (timestamp, unit, value) VALUES (%s, %s, %s)", data)
 
     conn.commit()
     cursor.close()

@@ -7,7 +7,6 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
-from fastapi.templating import Jinja2Templates
 
 # Load environment variables
 MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
@@ -48,7 +47,7 @@ def seed_database():
         with open(file_path, newline='') as csvfile:
             reader = csv.reader(csvfile)
             next(reader)  # Skip header row
-            data = [(float(row[0]), row[1], row[2]) for row in reader]
+            data = [(float(row[1]), row[2], row[0]) for row in reader]  # Fix column order
             cursor.executemany(f"INSERT INTO {table} (value, unit, timestamp) VALUES (%s, %s, %s)", data)
     
     conn.commit()
@@ -63,17 +62,9 @@ app = FastAPI()
 def startup_event():
     seed_database()
 
-# Serve static files and templates
-#app.mount("/static", StaticFiles(directory="static"), name="static")
-#templates = Jinja2Templates(directory="templates")
-
 @app.get("/", response_class=HTMLResponse)
 def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
-
-@app.get("/dashboard", response_class=HTMLResponse)
-def read_dashboard(request: Request):
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+    return "Hello, World!"  # Placeholder response
 
 # Pydantic model for request body
 class SensorData(BaseModel):
