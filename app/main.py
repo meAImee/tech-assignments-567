@@ -3,9 +3,8 @@ import csv
 import mysql.connector
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Literal
 from datetime import datetime
 
 # Load environment variables
@@ -74,11 +73,9 @@ class SensorData(BaseModel):
 
 # Routes for API
 @app.get("/api/{sensor_type}")
-def get_all_data(sensor_type: str, order_by: Optional[str] = Query(None, alias="order-by"),
+def get_all_data(sensor_type: Literal["temperature", "humidity", "light"], 
+                 order_by: Optional[str] = Query(None, alias="order-by"),
                  start_date: Optional[str] = None, end_date: Optional[str] = None):
-    if sensor_type not in ["temperature", "humidity", "light"]:
-        raise HTTPException(status_code=404, detail="Invalid sensor type")
-
     # Base query
     query = f"SELECT * FROM {sensor_type}"
     
@@ -106,11 +103,18 @@ def get_all_data(sensor_type: str, order_by: Optional[str] = Query(None, alias="
     
     return data
 
-@app.post("/api/{sensor_type}")
-def insert_data(sensor_type: str, data: SensorData):
-    if sensor_type not in ["temperature", "humidity", "light"]:
-        raise HTTPException(status_code=404, detail="Invalid sensor type")
+@app.get("/api/{sensor_type}/count")
+def get_count(sensor_type: Literal["temperature", "humidity", "light"]):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(f"SELECT COUNT(*) FROM {sensor_type}")
+    count = cursor.fetchone()[0]
+    cursor.close()
+    conn.close()
+    return {"count": count}
 
+@app.post("/api/{sensor_type}")
+def insert_data(sensor_type: Literal["temperature", "humidity", "light"], data: SensorData):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(f"INSERT INTO {sensor_type} (value, unit, timestamp) VALUES (%s, %s, %s)",
@@ -122,7 +126,7 @@ def insert_data(sensor_type: str, data: SensorData):
     return {"id": last_id}
 
 @app.get("/api/{sensor_type}/{id}")
-def get_data_by_id(sensor_type: str, id: int):
+def get_data_by_id(sensor_type: Literal["temperature", "humidity", "light"], id: int):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(f"SELECT * FROM {sensor_type} WHERE id = %s", (id,))
@@ -133,57 +137,11 @@ def get_data_by_id(sensor_type: str, id: int):
         raise HTTPException(status_code=404, detail="ID not found")
     return data
 
-@app.put("/api/{sensor_type}/{id}")
-def update_data(sensor_type: str, id: int, data: SensorData):
-    if sensor_type not in ["temperature", "humidity", "light"]:
-        raise HTTPException(status_code=404, detail="Invalid sensor type")
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    # Check if the record exists
-    cursor.execute(f"SELECT * FROM {sensor_type} WHERE id = %s", (id,))
-    existing_data = cursor.fetchone()
-
-    if not existing_data:
-        cursor.close()
-        conn.close()
-        raise HTTPException(status_code=404, detail="ID not found")
-
-    # Update the record
-    cursor.execute(
-        f"UPDATE {sensor_type} SET value = %s, unit = %s, timestamp = %s WHERE id = %s",
-        (data.value, data.unit, data.timestamp, id)
-    )
-    conn.commit()
-
-    cursor.close()
-    conn.close()
-
-    return {"status": "success", "message": "Record updated successfully"}
-
-@app.get("/api/{sensor_type}/count")
-def get_count(sensor_type: str):
-    if sensor_type not in ["temperature", "humidity", "light"]:
-        raise HTTPException(status_code=400, detail="Invalid sensor type")
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(f"SELECT COUNT(*) FROM {sensor_type}")
-    count = cursor.fetchone()[0]
-    cursor.close()
-    conn.close()
-    return {"count": count}
-
 @app.delete("/api/{sensor_type}/{id}")
-def delete_data(sensor_type: str, id: int):
-    if sensor_type not in ["temperature", "humidity", "light"]:
-        raise HTTPException(status_code=404, detail="Invalid sensor type")
-
+def delete_data(sensor_type: Literal["temperature", "humidity", "light"], id: int):
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Check if the record exists
     cursor.execute(f"SELECT * FROM {sensor_type} WHERE id = %s", (id,))
     data = cursor.fetchone()
     
@@ -192,7 +150,6 @@ def delete_data(sensor_type: str, id: int):
         conn.close()
         raise HTTPException(status_code=404, detail="ID not found")
     
-    # Delete the record
     cursor.execute(f"DELETE FROM {sensor_type} WHERE id = %s", (id,))
     conn.commit()
     
@@ -204,4 +161,4 @@ def delete_data(sensor_type: str, id: int):
 # Run FastAPI server
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app="app.main:app", host="0.0.0.0", port=6543, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=6543, reload=True)
