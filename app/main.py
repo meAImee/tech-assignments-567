@@ -3,7 +3,6 @@ import csv
 import mysql.connector
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
@@ -85,9 +84,9 @@ def get_all_data(sensor_type: str, order_by: Optional[str] = Query(None, alias="
     # Add date filters if provided
     filters = []
     if start_date:
-        filters.append(f"timestamp >= STR_TO_DATE('{start_date}', '%Y-%m-%d %H:%i:%s')")
+        filters.append(f"timestamp >= '{start_date}'")
     if end_date:
-        filters.append(f"timestamp <= STR_TO_DATE('{end_date}', '%Y-%m-%d %H:%i:%s')")
+        filters.append(f"timestamp <= '{end_date}'")
     
     if filters:
         query += " WHERE " + " AND ".join(filters)
