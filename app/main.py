@@ -133,6 +133,35 @@ def get_data_by_id(sensor_type: str, id: int):
         raise HTTPException(status_code=404, detail="ID not found")
     return data
 
+@app.put("/api/{sensor_type}/{id}")
+def update_data(sensor_type: str, id: int, data: SensorData):
+    if sensor_type not in ["temperature", "humidity", "light"]:
+        raise HTTPException(status_code=404, detail="Invalid sensor type")
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the record exists
+    cursor.execute(f"SELECT * FROM {sensor_type} WHERE id = %s", (id,))
+    existing_data = cursor.fetchone()
+
+    if not existing_data:
+        cursor.close()
+        conn.close()
+        raise HTTPException(status_code=404, detail="ID not found")
+
+    # Update the record
+    cursor.execute(
+        f"UPDATE {sensor_type} SET value = %s, unit = %s, timestamp = %s WHERE id = %s",
+        (data.value, data.unit, data.timestamp, id)
+    )
+    conn.commit()
+
+    cursor.close()
+    conn.close()
+
+    return {"status": "success", "message": "Record updated successfully"}
+
 @app.get("/api/{sensor_type}/count")
 def get_count(sensor_type: str):
     if sensor_type not in ["temperature", "humidity", "light"]:
