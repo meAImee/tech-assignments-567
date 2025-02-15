@@ -79,23 +79,31 @@ def get_all_data(sensor_type: str, order_by: Optional[str] = Query(None, alias="
     if sensor_type not in ["temperature", "humidity", "light"]:
         raise HTTPException(status_code=404, detail="Invalid sensor type")
 
+    # Base query
     query = f"SELECT * FROM {sensor_type}"
+    
+    # Add date filters if provided
     filters = []
     if start_date:
-        filters.append(f"timestamp >= '{start_date}'")
+        filters.append(f"timestamp >= STR_TO_DATE('{start_date}', '%Y-%m-%d %H:%i:%s')")
     if end_date:
-        filters.append(f"timestamp <= '{end_date}'")
+        filters.append(f"timestamp <= STR_TO_DATE('{end_date}', '%Y-%m-%d %H:%i:%s')")
+    
     if filters:
         query += " WHERE " + " AND ".join(filters)
+    
+    # Add ordering if provided
     if order_by in ["value", "timestamp"]:
         query += f" ORDER BY {order_by}"
 
+    # Execute the query
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(query)
     data = cursor.fetchall()
     cursor.close()
     conn.close()
+    
     return data
 
 @app.post("/api/{sensor_type}")
