@@ -164,7 +164,7 @@ def update_data(sensor_type: str, id: int, data: SensorData):
 @app.get("/api/{sensor_type}/count")
 def get_count(sensor_type: str):
     if sensor_type not in ["temperature", "humidity", "light"]:
-        raise HTTPException(status_code=400, detail="Invalid sensor type")
+        raise HTTPException(status_code=404, detail="Invalid sensor type")
     
     conn = get_db_connection()
     cursor = conn.cursor()
