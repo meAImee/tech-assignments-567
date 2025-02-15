@@ -27,13 +27,13 @@ def get_db_connection():
 def seed_database():
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     tables = {
         "temperature": "./sample/temperature.csv",
         "humidity": "./sample/humidity.csv",
         "light": "./sample/light.csv"
     }
-    
+
     for table, file_path in tables.items():
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {table} (
@@ -43,13 +43,13 @@ def seed_database():
                 timestamp DATETIME NOT NULL
             )
         """)
-        
+
         with open(file_path, newline='') as csvfile:
             reader = csv.reader(csvfile)
             next(reader)  # Skip header row
             data = [(float(row[1]), row[2], row[0]) for row in reader]  # Fix column order
             cursor.executemany(f"INSERT INTO {table} (value, unit, timestamp) VALUES (%s, %s, %s)", data)
-    
+
     conn.commit()
     cursor.close()
     conn.close()
@@ -70,51 +70,15 @@ def read_root(request: Request):
 class SensorData(BaseModel):
     value: float
     unit: str
-    timestamp: Optional[str] = Field(None)
+    timestamp: Optional[str] = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-@app.post("/api/{sensor_type}")
-def insert_data(sensor_type: str, data: SensorData):
-    if sensor_type not in ["temperature", "humidity", "light"]:
-        raise HTTPException(status_code=400, detail="Invalid sensor type")
-    
-    if not data.timestamp:
-        data.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(f"INSERT INTO {sensor_type} (value, unit, timestamp) VALUES (%s, %s, %s)",
-                   (data.value, data.unit, data.timestamp))
-    conn.commit()
-    last_id = cursor.lastrowid
-    cursor.close()
-    conn.close()
-    return {"id": last_id, "timestamp": data.timestamp}
-
-@app.delete("/api/{sensor_type}/{id}")
-def delete_data(sensor_type: str, id: int):
-    if sensor_type not in ["temperature", "humidity", "light"]:
-        raise HTTPException(status_code=400, detail="Invalid sensor type")
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(f"DELETE FROM {sensor_type} WHERE id = %s", (id,))
-    conn.commit()
-    
-    if cursor.rowcount == 0:
-        cursor.close()
-        conn.close()
-        raise HTTPException(status_code=404, detail="ID not found")
-    
-    cursor.close()
-    conn.close()
-    return {"message": "Data deleted successfully"}
-
+# Routes for API
 @app.get("/api/{sensor_type}")
 def get_all_data(sensor_type: str, order_by: Optional[str] = Query(None, alias="order-by"),
                  start_date: Optional[str] = None, end_date: Optional[str] = None):
     if sensor_type not in ["temperature", "humidity", "light"]:
-        raise HTTPException(status_code=400, detail="Invalid sensor type")
-    
+        raise HTTPException(status_code=404, detail="Invalid sensor type")
+
     query = f"SELECT * FROM {sensor_type}"
     filters = []
     if start_date:
@@ -125,13 +89,40 @@ def get_all_data(sensor_type: str, order_by: Optional[str] = Query(None, alias="
         query += " WHERE " + " AND ".join(filters)
     if order_by in ["value", "timestamp"]:
         query += f" ORDER BY {order_by}"
-    
+
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(query)
     data = cursor.fetchall()
     cursor.close()
     conn.close()
+    return data
+
+@app.post("/api/{sensor_type}")
+def insert_data(sensor_type: str, data: SensorData):
+    if sensor_type not in ["temperature", "humidity", "light"]:
+        raise HTTPException(status_code=404, detail="Invalid sensor type")
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(f"INSERT INTO {sensor_type} (value, unit, timestamp) VALUES (%s, %s, %s)",
+                   (data.value, data.unit, data.timestamp))
+    conn.commit()
+    last_id = cursor.lastrowid
+    cursor.close()
+    conn.close()
+    return {"id": last_id}
+
+@app.get("/api/{sensor_type}/{id}")
+def get_data_by_id(sensor_type: str, id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(f"SELECT * FROM {sensor_type} WHERE id = %s", (id,))
+    data = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    if not data:
+        raise HTTPException(status_code=404, detail="ID not found")
     return data
 
 @app.get("/api/{sensor_type}/count")
@@ -146,6 +137,32 @@ def get_count(sensor_type: str):
     cursor.close()
     conn.close()
     return {"count": count}
+
+@app.delete("/api/{sensor_type}/{id}")
+def delete_data(sensor_type: str, id: int):
+    if sensor_type not in ["temperature", "humidity", "light"]:
+        raise HTTPException(status_code=404, detail="Invalid sensor type")
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Check if the record exists
+    cursor.execute(f"SELECT * FROM {sensor_type} WHERE id = %s", (id,))
+    data = cursor.fetchone()
+    
+    if not data:
+        cursor.close()
+        conn.close()
+        raise HTTPException(status_code=404, detail="ID not found")
+    
+    # Delete the record
+    cursor.execute(f"DELETE FROM {sensor_type} WHERE id = %s", (id,))
+    conn.commit()
+    
+    cursor.close()
+    conn.close()
+    
+    return {"status": "success", "message": "Record deleted successfully"}
 
 # Run FastAPI server
 if __name__ == "__main__":
