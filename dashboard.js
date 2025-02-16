@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", function() {
+    console.log(1)
     function fetchData(sensorType, chartId) {
         fetch(`/api/${sensorType}`)
             .then(response => response.json())

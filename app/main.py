@@ -6,6 +6,17 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI, Request, Form
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
+import requests
+from dotenv import load_dotenv
+import json
 
 # Load environment variables
 MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
@@ -16,10 +27,10 @@ MYSQL_DATABASE = os.getenv("MYSQL_DATABASE")
 # Establish database connection
 def get_db_connection():
     return mysql.connector.connect(
-        host=MYSQL_HOST,
-        user=MYSQL_USER,
-        password=MYSQL_PASSWORD,
-        database=MYSQL_DATABASE
+        host='localhost',
+        user='root',
+        password='Aimee@0807',
+        database = 'ECE140A'
     )
 
 # Create tables and seed data
@@ -64,6 +75,26 @@ def startup_event():
 @app.get("/", response_class=HTMLResponse)
 def read_root(request: Request):
     return "Hello, World!"  # Placeholder response
+
+# Pydantic model for request body
+class SensorData(BaseModel):
+    value: float
+    unit: str
+    timestamp: Optional[str] = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+
+@app.get("/index", response_class=HTMLResponse)
+def read_root(request: Request):
+    #return HTMLResponse(content=html.read())
+    with open("./index.html") as html:
+        return HTMLResponse(content=html.read())
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def read_dashboard(request: Request):
+    #emplates.TemplateResponse("dashboard.html", {"request": request})
+    #print("1")
+    with open("./dashboard.html") as html:
+        return HTMLResponse(content=html.read())
 
 # Pydantic model for request body
 class SensorData(BaseModel):
@@ -174,6 +205,17 @@ def get_count(sensor_type: str):
     conn.close()
     return {"count": count}
 
+@app.get("/dashboard", response_class=HTMLResponse)
+def read_dashboard(request: Request):
+    with open(".dashboard.html") as html:
+        return HTMLResponse(content=html.read())
+
+# Pydantic model for request body
+class SensorData(BaseModel):
+    value: float
+    unit: str
+    timestamp: Optional[str] = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
 @app.delete("/api/{sensor_type}/{id}")
 def delete_data(sensor_type: str, id: int):
     if sensor_type not in ["temperature", "humidity", "light"]:
@@ -199,6 +241,21 @@ def delete_data(sensor_type: str, id: int):
     conn.close()
     
     return {"status": "success", "message": "Record deleted successfully"}
+
+
+#@app.get("dashboard.js", response_class=HTMLResponse)
+#def get_dashboard_js():
+    #return """
+    #document.addEventListener("DOMContentLoaded", function() {
+    #    fetch('/api/temperature')
+    #        .then(response => response.json())
+    #        .then(data => console.log("Temperature Data:", data));
+    #});
+    #"""
+
+@app.get("/dashboard.js", response_class=FileResponse)
+def get_dashboard_js():
+    return FileResponse(os.path.join(os.getcwd(), "dashboard.js"))
 
 # Run FastAPI server
 if __name__ == "__main__":
