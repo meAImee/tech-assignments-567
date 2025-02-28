@@ -8,6 +8,7 @@ from typing import Optional
 from datetime import datetime
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from fastapi.lifespan import Lifespan
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -60,9 +61,8 @@ def seed_database():
 # Define FastAPI app
 app = FastAPI()
 
-# Run database seeding on startup
 @app.on_event("startup")
-def startup_event():
+async def startup_event():
     seed_database()
 
 @app.get("/", response_class=HTMLResponse)
