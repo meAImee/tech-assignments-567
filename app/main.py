@@ -83,11 +83,11 @@ class SensorData(BaseModel):
     timestamp: Optional[str] = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
 
-@app.get("/index", response_class=HTMLResponse)
-def read_root(request: Request):
+#@app.get("/index", response_class=HTMLResponse)
+#def read_root(request: Request):
     #return HTMLResponse(content=html.read())
-    with open("./index.html") as html:
-        return HTMLResponse(content=html.read())
+    #with open("./index.html") as html:
+        #return HTMLResponse(content=html.read())
 
 @app.get("/dashboard", response_class=HTMLResponse)
 def read_dashboard(request: Request):
