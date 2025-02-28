@@ -72,9 +72,9 @@ app = FastAPI()
 def startup_event():
     seed_database()
 
-@app.get("/", response_class=HTMLResponse)
-def read_root(request: Request):
-    return "Hello, World!"  # Placeholder response
+#@app.get("/", response_class=HTMLResponse)
+#def read_root(request: Request):
+    #return "Hello, World!"  # Placeholder response
 
 # Pydantic model for request body
 class SensorData(BaseModel):
