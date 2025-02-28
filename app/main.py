@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 import json
 
 # Load environment variables
-MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
+MYSQL_HOST = os.getenv("MYSQL_HOST")
 MYSQL_USER = os.getenv("MYSQL_USER")
 MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD")
 MYSQL_DATABASE = os.getenv("MYSQL_DATABASE")
@@ -27,8 +27,8 @@ MYSQL_DATABASE = os.getenv("MYSQL_DATABASE")
 # Establish database connection
 def get_db_connection():
     return mysql.connector.connect(
-        host='localhost',
-        user='root',
+        host='',
+        user='',
         password='Aimee@0807',
         database = 'ECE140A'
     )
